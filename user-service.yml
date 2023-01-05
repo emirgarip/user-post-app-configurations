@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    initialization-mode: always
+    platform: postgres
+    url: jdbc:postgresql://localhost:5432/User?currentSchema=public
+    username: postgres
+    password: password
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        ddl-auto: update
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    consumer:
+      bootstrap-servers: localhost:9092
+      group-id: user-service
+      auto-offset-reset: earliest
+      key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-serializer: org.apache.kafka.common.serialization.StringDeserializer
+  sleuth:
+    sampler:
+      probability: 1.0
+application-description: User Service App Default
+application-version: 1.0
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true
+resilience4j:
+  retry:
+    instances:
+      getUser:
+        maxRetryAttempts: 5
+        waitDuration: 2s
+        enableExponentialBackoff: true
