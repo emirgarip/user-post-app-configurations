@@ -1,10 +1,10 @@
 spring:
-  datasource:
-    initialization-mode: always
-    platform: postgres
-    url: jdbc:postgresql://localhost:5432/User?currentSchema=public
-    username: postgres
-    password: password
+  # datasource:
+  #   initialization-mode: always
+  #   platform: postgres
+  #   url: jdbc:postgresql://localhost:5432/User?currentSchema=public
+  #   username: postgres
+  #   password: password
   jpa:
     properties:
       hibernate:
@@ -25,12 +25,12 @@ spring:
       probability: 1.0
 application-description: User Service App Default
 application-version: 1.0
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka
-  instance:
-    prefer-ip-address: true
+# eureka:
+#   client:
+#     serviceUrl:
+#       defaultZone: http://localhost:8761/eureka
+#   instance:
+#     prefer-ip-address: true
 resilience4j:
   retry:
     instances:

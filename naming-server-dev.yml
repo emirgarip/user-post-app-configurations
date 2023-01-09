@@ -2,5 +2,5 @@ eureka:
   client:
     register-with-eureka: false
     fetch-registry: false
-application-description: Naming Server App Dev
-application-version: 1.0
+# application-description: Naming Server App Dev
+# application-version: 1.0
