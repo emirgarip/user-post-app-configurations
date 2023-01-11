@@ -1,12 +1,22 @@
 ---
 version: '3'
 services:
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - user-post-network
+    
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - user-post-network
 
   broker:
     image: confluentinc/cp-kafka:7.3.0
@@ -16,7 +26,10 @@ services:
     # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
       - "9092:9092"
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
+    networks:
+      - user-post-network
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -25,3 +38,105 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  postgres:
+    container_name: postgres
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      # - POSTGRES_DB=User
+    ports:
+      - "5432:5432"
+    volumes: 
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - user-post-network
+    # healthcheck:
+    #   test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'"]
+    #   interval: 10s
+    #   timeout: 3s
+    #   retries: 3
+    
+  cloud-config:
+    container_name: cloud-config
+    image: emirgarip/spring-cloud-config:0.0.1-SNAPSHOT
+    mem_limit: 900m
+    ports:
+      - "8887:8887"
+    networks:
+      - user-post-network
+    environment:
+      spring.cloud.config.server.git.uri: https://github.com/emirgarip/user-post-app-configurations
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8887/actuator/health"]
+    #   # test: ["CMD", "curl", "-f", "http://cloud-config:8887/user-service/dev"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+  naming-server:
+    container_name: naming-server
+    image: emirgarip/eureka-server:0.0.1-SNAPSHOT
+    mem_limit: 900m
+    ports:
+      - "8761:8761"
+    networks:
+      - user-post-network
+    depends_on:
+      cloud-config: service_started
+    restart: on-failure
+    # command: 
+    #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
+    environment:
+      spring.config.import: optional:configserver:http://cloud-config:8887
+      spring.cloud.config.profile: dev
+
+  user-service:
+    container_name: user-service
+    image: emirgarip/user-service:0.0.1-SNAPSHOT
+    mem_limit: 900m
+    ports:
+      - "8080:8080"
+    networks:
+      - user-post-network
+    depends_on:
+      cloud-config:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      postgres:
+        condition: service_started
+      zipkin:
+        condition: service_started
+      broker:
+        condition: service_started
+    restart: on-failure
+    # command: 
+    #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
+    #   - sh -c './wait-for http://naming-server:8761/eureka -- echo "The naming server is up! Let's use it"'
+    environment:
+      spring.config.import: optional:configserver:http://cloud-config:8887
+      spring.cloud.config.profile: dev
+      spring.datasource.url: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
+      eureka.instance.prefer-ip-address: true
+      spring.datasource.username: postgres
+      spring.datasource.password: password
+      spring.datasource.initialization-mode: always
+      spring.kafka.consumer.bootstrap-servers: broker:9092
+      # spring.kafka.consumer.group-id: user-service
+      # spring.kafka.consumer.auto-offset-reset: earliest
+      # spring.kafka.consumer.key-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      # spring.kafka.consumer.value-serializer: org.apache.kafka.common.serialization.StringDeserializer
+      # spring.sleuth.sampler.probability: 1.0
+
+networks:
+  user-post-network:
+    driver: bridge
+
+volumes:
+  postgres:
+    driver: local
+  
