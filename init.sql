@@ -1,0 +1,2 @@
+-- CREATE DATABASE IF NOT EXISTS UserPost;
+-- CREATE SEQUENCE IF NOT EXISTS public.hibernate_sequence;

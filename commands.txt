@@ -15,7 +15,7 @@ docker run -p 8887:8887 emirgarip/spring-cloud-config:0.0.1-SNAPSHOT
 docker run -p 8761:8761 emirgarip/eureka-server:0.0.1-SNAPSHOT
 docker run -p 8080:8080 emirgarip/user-service:0.0.1-SNAPSHOT
 
-#git push to remote repo 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
+#git push to remote repo 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
 git add *
 git init .
 git commit -m "command"

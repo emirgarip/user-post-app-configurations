@@ -28,13 +28,14 @@ services:
     depends_on:
       zookeeper:
         condition: service_started
+    restart: on-failure
     networks:
       - user-post-network
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092,PLAINTEXT_INTERNAL://broker:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -46,11 +47,12 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      # - POSTGRES_DB=User
+      - POSTGRES_DB=userpost
     ports:
       - "5432:5432"
     volumes: 
       - postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - user-post-network
     # healthcheck:
@@ -84,14 +86,17 @@ services:
       - "8761:8761"
     networks:
       - user-post-network
-    depends_on:
-      cloud-config: service_started
+    # depends_on:
+    #   cloud-config: 
+    #     condition: service_started
     restart: on-failure
     # command: 
     #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
     environment:
-      spring.config.import: optional:configserver:http://cloud-config:8887
-      spring.cloud.config.profile: dev
+      # spring.config.import: optional:configserver:http://cloud-config:8887
+      # spring.cloud.config.profile: dev
+      eureka.client.register-with-eureka: false 
+      eureka.client.fetch-registry: false
 
   user-service:
     container_name: user-service
@@ -119,13 +124,13 @@ services:
     environment:
       spring.config.import: optional:configserver:http://cloud-config:8887
       spring.cloud.config.profile: dev
-      spring.datasource.url: jdbc:postgresql://postgres:5432/postgres?currentSchema=public
+      spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=users
       eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
       eureka.instance.prefer-ip-address: true
       spring.datasource.username: postgres
       spring.datasource.password: password
       spring.datasource.initialization-mode: always
-      spring.kafka.consumer.bootstrap-servers: broker:9092
+      spring.kafka.consumer.bootstrap-servers: host.docker.internal:9092
       # spring.kafka.consumer.group-id: user-service
       # spring.kafka.consumer.auto-offset-reset: earliest
       # spring.kafka.consumer.key-serializer: org.apache.kafka.common.serialization.StringDeserializer
