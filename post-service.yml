@@ -1,21 +1,22 @@
 spring:
-  datasource:
-    initialization-mode: always
-    platform: postgres
-    url: jdbc:postgresql://localhost:5432/User?currentSchema=post
-    username: postgres
-    password: password
+  # datasource:
+  #   initialization-mode: always
+  #   platform: postgres
+  #   url: jdbc:postgresql://localhost:5432/User?currentSchema=post
+  #   username: postgres
+  #   password: password
   jpa:
-    properties:
-      hibernate:
-        jdbc:
-          lob:
-            non_contextual_creation: true
-        ddl-auto: update
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+    # properties:
+    #   hibernate:
+    #     jdbc:
+    #       lob:
+    #         non_contextual_creation: true
   kafka:
     producer:
-      bootstrap-servers: localhost:9092
+      # bootstrap-servers: localhost:9092
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
   sleuth:
@@ -23,9 +24,9 @@ spring:
       probability: 1.0
 application-description: Post Service App Default
 application-version: 1.0
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka
-  instance:
-    prefer-ip-address: true
+# eureka:
+#   client:
+#     serviceUrl:
+#       defaultZone: http://localhost:8761/eureka
+#   instance:
+#     prefer-ip-address: true

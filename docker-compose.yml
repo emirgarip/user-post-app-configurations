@@ -131,11 +131,40 @@ services:
       spring.datasource.password: password
       spring.datasource.initialization-mode: always
       spring.kafka.consumer.bootstrap-servers: host.docker.internal:9092
-      # spring.kafka.consumer.group-id: user-service
-      # spring.kafka.consumer.auto-offset-reset: earliest
-      # spring.kafka.consumer.key-serializer: org.apache.kafka.common.serialization.StringDeserializer
-      # spring.kafka.consumer.value-serializer: org.apache.kafka.common.serialization.StringDeserializer
-      # spring.sleuth.sampler.probability: 1.0
+
+  post-service:
+    container_name: post-service
+    image: emirgarip/post-service:0.0.1-SNAPSHOT
+    mem_limit: 900m
+    ports:
+      - "8081:8081"
+    networks:
+      - user-post-network
+    depends_on:
+      cloud-config:
+        condition: service_started
+      naming-server:
+        condition: service_started
+      postgres:
+        condition: service_started
+      zipkin:
+        condition: service_started
+      broker:
+        condition: service_started
+    restart: on-failure
+    # command: 
+    #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
+    #   - sh -c './wait-for http://naming-server:8761/eureka -- echo "The naming server is up! Let's use it"'
+    environment:
+      spring.config.import: optional:configserver:http://cloud-config:8887
+      spring.cloud.config.profile: dev
+      spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=posts
+      eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
+      eureka.instance.prefer-ip-address: true
+      spring.datasource.username: postgres
+      spring.datasource.password: password
+      spring.datasource.initialization-mode: always
+      spring.kafka.producer.bootstrap-servers: host.docker.internal:9092
 
 networks:
   user-post-network:
