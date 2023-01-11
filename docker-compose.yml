@@ -64,7 +64,7 @@ services:
   cloud-config:
     container_name: cloud-config
     image: emirgarip/spring-cloud-config:0.0.1-SNAPSHOT
-    mem_limit: 900m
+    # mem_limit: 900m
     ports:
       - "8887:8887"
     networks:
@@ -81,7 +81,7 @@ services:
   naming-server:
     container_name: naming-server
     image: emirgarip/eureka-server:0.0.1-SNAPSHOT
-    mem_limit: 900m
+    # mem_limit: 900m
     ports:
       - "8761:8761"
     networks:
@@ -98,10 +98,28 @@ services:
       eureka.client.register-with-eureka: false 
       eureka.client.fetch-registry: false
 
+  api-gateway:
+    container_name: api-gateway
+    image: emirgarip/spring-cloud-api-gateway:0.0.1-SNAPSHOT
+    # mem_limit: 900m
+    ports:
+      - "8765:8765"
+    networks:
+      - user-post-network
+    depends_on:
+      naming-server: 
+        condition: service_started
+    restart: on-failure
+    environment:
+      eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
+      spring.sleuth.sampler.probability: 1.0
+      spring.zipkin.baseUrl: http://zipkin:9411/
+
+
   user-service:
     container_name: user-service
     image: emirgarip/user-service:0.0.1-SNAPSHOT
-    mem_limit: 900m
+    # mem_limit: 900m
     ports:
       - "8080:8080"
     networks:
@@ -126,16 +144,17 @@ services:
       spring.cloud.config.profile: dev
       spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=users
       eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
-      eureka.instance.prefer-ip-address: true
+      # eureka.instance.prefer-ip-address: true
       spring.datasource.username: postgres
       spring.datasource.password: password
       spring.datasource.initialization-mode: always
       spring.kafka.consumer.bootstrap-servers: host.docker.internal:9092
+      spring.zipkin.baseUrl: http://zipkin:9411/
 
   post-service:
     container_name: post-service
     image: emirgarip/post-service:0.0.1-SNAPSHOT
-    mem_limit: 900m
+    # mem_limit: 900m
     ports:
       - "8081:8081"
     networks:
@@ -160,11 +179,12 @@ services:
       spring.cloud.config.profile: dev
       spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=posts
       eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
-      eureka.instance.prefer-ip-address: true
+      # eureka.instance.prefer-ip-address: true
       spring.datasource.username: postgres
       spring.datasource.password: password
       spring.datasource.initialization-mode: always
       spring.kafka.producer.bootstrap-servers: host.docker.internal:9092
+      spring.zipkin.baseUrl: http://zipkin:9411/
 
 networks:
   user-post-network:
