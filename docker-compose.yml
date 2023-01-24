@@ -40,19 +40,24 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  postgres:
-    container_name: postgres
+  postgres1:
+    container_name: postgres1
     image: postgres:14.1-alpine
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=userpost
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: userpostapp_user
+      # - POSTGRES_MULTIPLE_DATABASES="userpostapp_user","userpostapp_post" 
     ports:
-      - "5432:5432"
+      - "54320:5432"
     volumes: 
-      - postgres:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres1:/var/lib/postgresql/data
+      # - ./init1.sql:/docker-entrypoint-initdb.d/init1.sql
+      # - ./create_user_db.sh:/docker-entrypoint-initdb.d/create_user_db.sh
+    # entrypoint:
+    #   - docker-entrypoint.sh
+    #   - create_user_db
     networks:
       - user-post-network
     # healthcheck:
@@ -60,22 +65,31 @@ services:
     #   interval: 10s
     #   timeout: 3s
     #   retries: 3
-    
-  cloud-config:
-    container_name: cloud-config
-    image: emirgarip/spring-cloud-config:0.0.1-SNAPSHOT
-    # mem_limit: 900m
+
+  postgres2:
+    container_name: postgres2
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: userpostapp_post
+      # - POSTGRES_MULTIPLE_DATABASES="userpostapp_user","userpostapp_post" 
     ports:
-      - "8887:8887"
+      - "54321:5432"
+    volumes: 
+      - postgres2:/var/lib/postgresql/data
+      # - ./init2.sql:/docker-entrypoint-initdb.d/init2.sql
+      # - ./create_post_db.sh:/docker-entrypoint-initdb.d/create_post_db.sh
+    # entrypoint:
+    #   - docker-entrypoint.sh
+    #   - create_post_db
     networks:
       - user-post-network
-    environment:
-      spring.cloud.config.server.git.uri: https://github.com/emirgarip/user-post-app-configurations
     # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8887/actuator/health"]
-    #   # test: ["CMD", "curl", "-f", "http://cloud-config:8887/user-service/dev"]
-    #   interval: 30s
-    #   timeout: 10s
+    #   test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'"]
+    #   interval: 10s
+    #   timeout: 3s
     #   retries: 3
 
   naming-server:
@@ -125,11 +139,11 @@ services:
     networks:
       - user-post-network
     depends_on:
-      cloud-config:
-        condition: service_started
+      # cloud-config:
+      #   condition: service_started
       naming-server:
         condition: service_started
-      postgres:
+      postgres1:
         condition: service_started
       zipkin:
         condition: service_started
@@ -140,9 +154,9 @@ services:
     #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
     #   - sh -c './wait-for http://naming-server:8761/eureka -- echo "The naming server is up! Let's use it"'
     environment:
-      spring.config.import: optional:configserver:http://cloud-config:8887
-      spring.cloud.config.profile: dev
-      spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=users
+      # spring.config.import: optional:configserver:http://cloud-config:8887
+      # spring.cloud.config.profile: dev
+      spring.datasource.url: jdbc:postgresql://postgres1:5432/userpostapp_user?currentSchema=public
       eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
       # eureka.instance.prefer-ip-address: true
       spring.datasource.username: postgres
@@ -160,11 +174,11 @@ services:
     networks:
       - user-post-network
     depends_on:
-      cloud-config:
-        condition: service_started
+      # cloud-config:
+      #   condition: service_started
       naming-server:
         condition: service_started
-      postgres:
+      postgres2:
         condition: service_started
       zipkin:
         condition: service_started
@@ -175,9 +189,9 @@ services:
     #   - sh -c './wait-for http://cloud-config:8887/user-service/dev -- echo "The config server is up! Let's use it"'
     #   - sh -c './wait-for http://naming-server:8761/eureka -- echo "The naming server is up! Let's use it"'
     environment:
-      spring.config.import: optional:configserver:http://cloud-config:8887
-      spring.cloud.config.profile: dev
-      spring.datasource.url: jdbc:postgresql://postgres:5432/userpost?currentSchema=posts
+      # spring.config.import: optional:configserver:http://cloud-config:8887
+      # spring.cloud.config.profile: dev
+      spring.datasource.url: jdbc:postgresql://postgres2:5432/userpostapp_post?currentSchema=public
       eureka.client.serviceUrl.defaultZone: http://naming-server:8761/eureka
       # eureka.instance.prefer-ip-address: true
       spring.datasource.username: postgres
@@ -185,12 +199,51 @@ services:
       spring.datasource.initialization-mode: always
       spring.kafka.producer.bootstrap-servers: host.docker.internal:9092
       spring.zipkin.baseUrl: http://zipkin:9411/
-
+  
 networks:
   user-post-network:
     driver: bridge
 
 volumes:
-  postgres:
+  postgres1:
     driver: local
-  
+  postgres2:
+    driver: local
+
+  # postgres2:
+  #   container_name: postgres_post
+  #   image: postgres:14.1-alpine
+  #   restart: always
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=userpostapp_post
+  #   ports:
+  #     - "5431:5431"
+  #   volumes: 
+  #     - postgres:/var/lib/postgresql/data
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   networks:
+  #     - user-post-network
+  #   # healthcheck:
+  #   #   test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'"]
+  #   #   interval: 10s
+  #   #   timeout: 3s
+  #   #   retries: 3
+    
+  # cloud-config:
+  #   container_name: cloud-config
+  #   image: emirgarip/spring-cloud-config:0.0.1-SNAPSHOT
+  #   # mem_limit: 900m
+  #   ports:
+  #     - "8887:8887"
+  #   networks:
+  #     - user-post-network
+  #   environment:
+  #     spring.cloud.config.server.git.uri: https://github.com/emirgarip/user-post-app-configurations
+  #   # healthcheck:
+  #   #   test: ["CMD", "curl", "-f", "http://localhost:8887/actuator/health"]
+  #   #   # test: ["CMD", "curl", "-f", "http://cloud-config:8887/user-service/dev"]
+  #   #   interval: 30s
+  #   #   timeout: 10s
+  #   #   retries: 3

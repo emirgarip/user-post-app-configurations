@@ -20,3 +20,8 @@ git add *
 git init .
 git commit -m "command"
 git push origin main
+
+#kubernates create cluster and deploy app
+eksctl create cluster -n cluster1 --nodegroup-name ng1 --region us-east-1 --node-type t2.micro --nodes 2
+kubectl create deployment hello-world-rest-api --image=in28min/hello-world-rest-api:0.0.1.RELEASE
+kubectl expose deployment hello-world-rest-api --type=LoadBalancer --port=8080
